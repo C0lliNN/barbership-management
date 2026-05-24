@@ -1,0 +1,6 @@
+catalogs:
+- name: catalog-1
+  url: https://github.com/mnriem/spec-kit-extensions/tree/main/aide
+  priority: 1
+  install_allowed: true
+  description: ''
