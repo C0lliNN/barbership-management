@@ -153,7 +153,10 @@ May or may not create a full account — booking friction must be minimal.
 > **Pinned libraries are authoritative.** Work items must align with the choices above
 > rather than re-proposing alternatives. A genuinely new library need is a decision to
 > confirm with the user **before** implementation — never a post-completion swap.
-> (DB driver/migration tool to be pinned here when chosen in Item 003.)
+>
+> **Pinned in Item 003:**
+> - **DB driver:** `github.com/jackc/pgx/v5` — using `pgxpool` directly (native pgx API, not `database/sql` shim).
+> - **Migration tool:** `github.com/golang-migrate/migrate/v4` — SQL-file migrations, embedded via `embed.FS`, CLI + programmatic API.
 
 ### 5.2 Architectural Principles
 - **Multi-tenancy** baked into the data model from day one (tenant/shop ID scoping on

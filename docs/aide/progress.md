@@ -33,20 +33,20 @@
 
 ## Stage 0 — Foundation & Scaffolding
 
-**Status:** 📋 Planned
+**Status:** 🚧 In Progress
 
 ### Deliverables
 - ✅ Go API service skeleton (router, config, structured logging, graceful shutdown)
-- 📋 PostgreSQL connection + migration tooling
+- ✅ PostgreSQL connection + migration tooling
 - ✅ `GET /health` and `/ready` endpoints
 - 📋 Next.js PWA skeleton (SSR, manifest, service worker, pt-BR locale base)
-- 📋 `docker-compose` local dev (API + Postgres + frontend)
+- 🚧 `docker-compose` local dev — API + Postgres done (`make dev` / `make dev-local`); frontend service wired in Item 004 once Item 005 scaffold exists
 - 📋 CI pipeline: build, lint, test for Go and frontend
 - ✅ Repository layout reflecting domain boundaries
 
 ### Acceptance Criteria
 - [ ] `docker-compose up` brings up API, DB, and frontend
-- [ ] `GET /health` returns 200; migrations run cleanly up and down
+- [x] `GET /health` returns 200; migrations run cleanly up and down ✅
 - [ ] Frontend renders pt-BR landing page and is installable (Lighthouse PWA pass)
 - [ ] CI is green on a trivial test for each side
 

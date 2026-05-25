@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/gcollin65/barbershop/internal/config"
+	"github.com/gcollin65/barbershop/internal/database"
 	apihttp "github.com/gcollin65/barbershop/internal/http"
 	"github.com/gcollin65/barbershop/internal/logging"
 )
@@ -34,9 +35,24 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
+	// --- Database ---
+	ctx := context.Background()
+	pool, err := database.New(ctx, &cfg, logger)
+	if err != nil {
+		logger.Fatal("failed to connect to database", zap.Error(err))
+	}
+	defer database.Close(pool)
+
+	// Apply pending migrations. A failure here is fatal: running against an
+	// inconsistent schema is unsafe.
+	if err := database.RunMigrations(cfg.DatabaseURL, database.Migrations, logger); err != nil {
+		logger.Fatal("migrations failed", zap.Error(err))
+	}
+
+	// --- HTTP server ---
 	srv := &http.Server{
 		Addr:         cfg.Addr(),
-		Handler:      apihttp.NewRouter(logger),
+		Handler:      apihttp.NewRouter(logger, pool),
 		ReadTimeout:  cfg.ReadTimeout,
 		WriteTimeout: cfg.WriteTimeout,
 	}
@@ -59,10 +75,10 @@ func main() {
 		logger.Info("shutdown signal received", zap.String("signal", sig.String()))
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		logger.Error("graceful shutdown failed", zap.Error(err))
 		return
 	}

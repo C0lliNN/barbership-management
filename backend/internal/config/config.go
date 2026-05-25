@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -16,6 +17,11 @@ type Config struct {
 	ShutdownTimeout time.Duration
 	ReadTimeout     time.Duration
 	WriteTimeout    time.Duration
+
+	// Database
+	DatabaseURL   string
+	DBMaxConns    int32
+	DBConnTimeout time.Duration
 }
 
 var validLogLevels = map[string]struct{}{
@@ -27,6 +33,8 @@ var validLogLevels = map[string]struct{}{
 
 // Load reads configuration from environment variables, applies defaults, and
 // validates the result. It returns a typed error when a value is invalid.
+//
+// DATABASE_URL is required unless APP_ENV=test.
 func Load() (Config, error) {
 	cfg := Config{
 		Port:            8080,
@@ -35,6 +43,8 @@ func Load() (Config, error) {
 		ShutdownTimeout: 10 * time.Second,
 		ReadTimeout:     15 * time.Second,
 		WriteTimeout:    15 * time.Second,
+		DBMaxConns:      10,
+		DBConnTimeout:   5 * time.Second,
 	}
 
 	if v := os.Getenv("PORT"); v != "" {
@@ -59,10 +69,45 @@ func Load() (Config, error) {
 		cfg.Env = v
 	}
 
+	// Database configuration
+	cfg.DatabaseURL = os.Getenv("DATABASE_URL")
+	if cfg.DatabaseURL == "" && cfg.Env != "test" {
+		return Config{}, fmt.Errorf("DATABASE_URL is required (set APP_ENV=test to bypass)")
+	}
+
+	if v := os.Getenv("DB_MAX_CONNS"); v != "" {
+		n, err := strconv.ParseInt(v, 10, 32)
+		if err != nil || n < 1 || n > 100 {
+			return Config{}, fmt.Errorf("invalid DB_MAX_CONNS %q: must be an integer between 1 and 100", v)
+		}
+		cfg.DBMaxConns = int32(n)
+	}
+
+	if v := os.Getenv("DB_CONN_TIMEOUT"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid DB_CONN_TIMEOUT %q: %w", v, err)
+		}
+		cfg.DBConnTimeout = d
+	}
+
 	return cfg, nil
 }
 
 // Addr returns the listen address derived from the configured port.
 func (c Config) Addr() string {
 	return fmt.Sprintf(":%d", c.Port)
+}
+
+// DBHostPort parses the DatabaseURL and returns "host:port" for safe logging.
+// Returns an empty string if the URL is empty or unparseable.
+func (c Config) DBHostPort() string {
+	if c.DatabaseURL == "" {
+		return ""
+	}
+	u, err := url.Parse(c.DatabaseURL)
+	if err != nil {
+		return ""
+	}
+	return u.Host // "host:port" or just "host" when port is default
 }
