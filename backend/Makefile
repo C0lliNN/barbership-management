@@ -4,10 +4,12 @@
 #   Docker (for dev/db-* targets)
 #   golang-migrate CLI (with pgx5 driver, for migrate-* targets):
 #     go install -tags 'pgx5' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+#   Node 20+ (for make frontend-local only — not needed for Docker-based dev)
 #
 # Quick start:
-#   make dev          → build images and start full backend in Docker (postgres + API)
-#   make dev-local    → start postgres in Docker, run API locally via go run (fastest)
+#   make dev            → build images and start full stack in Docker (postgres + API + frontend)
+#   make dev-local      → start postgres in Docker, run API locally via go run (fastest)
+#   make frontend-local → run the frontend stub locally (Node 20+ required)
 
 # ── Config ────────────────────────────────────────────────────────────────────
 # docker compose project is defined by docker-compose.yml at the repo root.
@@ -25,6 +27,7 @@ MIGRATIONS_DIR := internal/database/migrations
 
 .PHONY: build vet test-short test \
         dev dev-down dev-logs dev-local \
+        frontend-logs frontend-local \
         db-start db-stop \
         migrate-up migrate-down migrate-status
 
@@ -46,16 +49,17 @@ test:
 
 ## ── Local development — full stack in Docker ─────────────────────────────────
 
-# Build images and start the full backend (postgres + API) in detached containers.
+# Build images and start the full stack (postgres + API + frontend) in detached containers.
 # Use this for a production-like local environment.
 dev:
 	$(COMPOSE) up --build -d
 	@echo ""
-	@echo "  Backend running:"
-	@echo "    API  → http://localhost:8080/health"
-	@echo "    DB   → localhost:5432 (user: barber, db: barbershop)"
+	@echo "  Stack running:"
+	@echo "    API      → http://localhost:8080/health"
+	@echo "    DB       → localhost:5432 (user: barber, db: barbershop)"
+	@echo "    Frontend → http://localhost:3000"
 	@echo ""
-	@echo "  Logs:   make dev-logs"
+	@echo "  Logs:   make dev-logs | make frontend-logs"
 	@echo "  Stop:   make dev-down"
 
 # Stop all services and remove containers (the postgres data volume is preserved).
@@ -66,11 +70,21 @@ dev-down:
 dev-logs:
 	$(COMPOSE) logs -f api
 
+# Follow frontend container logs (Ctrl-C to stop).
+frontend-logs:
+	$(COMPOSE) logs -f frontend
+
 # Start only postgres in Docker and run the API directly via 'go run'.
 # Faster iteration: no image rebuild needed on code changes — just re-run.
 # Reads DATABASE_URL from backend/.env if present (copy from .env.example first).
 dev-local: db-start
 	DATABASE_URL="$(DATABASE_URL)" go run ./cmd/api
+
+# Run the frontend stub locally without Docker (requires Node 20+).
+# Useful alongside 'make dev-local' when iterating on both API and frontend.
+# Path is relative to backend/ — this Makefile lives there.
+frontend-local:
+	NEXT_PUBLIC_API_URL=http://localhost:8080 node ../frontend/server.js
 
 ## ── Database only ────────────────────────────────────────────────────────────
 

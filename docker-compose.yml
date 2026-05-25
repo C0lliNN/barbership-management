@@ -36,6 +36,37 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    restart: unless-stopped
+
+  # ── Frontend (Next.js PWA — stub until Item 005) ─────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      # NEXT_PUBLIC_* prefix is the Next.js convention for browser-exposed vars.
+      # The stub reads this to display the API URL; Item 005 uses it for fetch() calls.
+      # Inside Docker the frontend container reaches the API via service DNS (api:8080).
+      # Browser clients use localhost:8080 (or a reverse proxy — out of scope for dev).
+      NEXT_PUBLIC_API_URL: http://api:8080
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     restart: unless-stopped
 
 volumes:

@@ -40,7 +40,7 @@
 - ✅ PostgreSQL connection + migration tooling
 - ✅ `GET /health` and `/ready` endpoints
 - 📋 Next.js PWA skeleton (SSR, manifest, service worker, pt-BR locale base)
-- 🚧 `docker-compose` local dev — API + Postgres done (`make dev` / `make dev-local`); frontend service wired in Item 004 once Item 005 scaffold exists
+- ✅ `docker-compose` local dev — all three services: postgres, API, frontend stub (`make dev`); `make dev-local` + `make frontend-local` for fast iteration
 - 📋 CI pipeline: build, lint, test for Go and frontend
 - ✅ Repository layout reflecting domain boundaries
 
