@@ -437,7 +437,7 @@ export DATABASE_URL="postgres://barber:secret@localhost:5432/barbershop?sslmode=
   added post-spec at user request, beyond the original Item 003 scope.
   - `backend/Dockerfile`: multi-stage build (`golang:1.25-alpine` builder →
     `alpine:3.21` runtime); `CGO_ENABLED=0 -trimpath`; includes `ca-certificates`
-    (Mercado Pago TLS) and `tzdata` (Brazil timezones); migrations embedded in binary.
+    (Mercado Pago TLS); migrations embedded in binary.
   - `docker-compose.yml` (project root): `postgres:16` + `api` services; postgres
     health-checked before api starts; named volume `postgres_data` for persistence;
     compose project name `barbershop`.

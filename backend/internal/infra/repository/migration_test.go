@@ -1,6 +1,6 @@
 //go:build integration
 
-package identity_test
+package repository_test
 
 import (
 	"context"

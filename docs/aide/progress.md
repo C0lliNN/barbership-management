@@ -58,7 +58,7 @@
 
 ### Deliverables
 - ✅ Data model: tenant/shop, user, role, membership; tenant ID scoping on all tables
-- 📋 Shop sign-up flow (create shop + first Owner account)
+- ✅ Shop sign-up flow (create shop + first Owner account)
 - 📋 Authentication (email/password; JWT or server session) and login
 - 📋 Authorization middleware: role checks + tenant-scoping at repository layer
 - 📋 Frontend: sign-up, login, role-aware authenticated shell
@@ -202,7 +202,7 @@
 **Status:** 📋 Planned
 
 ### Deliverables
-- 📋 pt-BR localization pass; BRL formatting; BR timezone correctness verified
+- 📋 pt-BR localization pass; BRL formatting and America/Sao_Paulo date/time display verified
 - 📋 PWA polish: install prompts, offline caching for core read screens, loading/empty/error states
 - 📋 LGPD: consent capture, data access/export, deletion flows; PII retention review
 - 📋 Security hardening: authz review, rate limiting, secrets, dependency audit; minimize PCI scope

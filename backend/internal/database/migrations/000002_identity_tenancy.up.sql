@@ -7,7 +7,6 @@ CREATE TABLE shop (
     address    TEXT,
     city       TEXT,
     state      CHAR(2),
-    timezone   TEXT        NOT NULL DEFAULT 'America/Sao_Paulo',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT shop_slug_unique UNIQUE (slug)

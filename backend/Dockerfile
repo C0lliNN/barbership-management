@@ -16,8 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -o /api ./cmd/api
 FROM alpine:3.21
 
 # ca-certificates: needed for TLS to external services (Mercado Pago, etc.)
-# tzdata: needed for correct Brazil timezone handling
-RUN apk --no-cache add ca-certificates tzdata
+RUN apk --no-cache add ca-certificates
 
 WORKDIR /app
 COPY --from=builder /api ./api

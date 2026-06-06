@@ -10,8 +10,8 @@ import (
 // pass nil to skip the DB check (useful in tests or early bootstrap).
 func NewRouter(logger *zap.Logger, pinger DBPinger) *gin.Engine {
 	engine := gin.New()
-	// Order: recover (outermost) -> request ID -> request logger.
-	engine.Use(recoverer(logger), requestID(), requestLogger(logger))
+	// Order: recover (outermost) → request ID → enrich logger → request logger.
+	engine.Use(recoverer(logger), requestID(), Logger(logger), requestLogger())
 
 	engine.GET("/health", handleHealth)
 	engine.GET("/ready", handleReady(pinger))

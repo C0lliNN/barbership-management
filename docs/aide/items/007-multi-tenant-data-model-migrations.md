@@ -45,8 +45,8 @@ build on these foundations.
       objects dropped, no residual state).
 - [ ] `make migrate-up` advances to schema version 2; `make migrate-down` rolls back
       to version 1; the cycle is repeatable without errors.
-- [ ] `shop` has: UUID PK, unique `slug`, required `name`, `timezone` defaulting to
-      `'America/Sao_Paulo'`, `created_at`/`updated_at` timestamptz.
+- [ ] `shop` has: UUID PK, unique `slug`, required `name`, `created_at`/`updated_at`
+      timestamptz.
 - [ ] `user` (quoted — reserved keyword) has: UUID PK, unique `email`, required
       `password_hash`, required `full_name`, `created_at`/`updated_at` timestamptz.
 - [ ] `membership` enforces UNIQUE(shop_id, user_id) with CASCADE deletes from both
@@ -85,7 +85,6 @@ CREATE TABLE shop (
     address    TEXT,
     city       TEXT,
     state      CHAR(2),
-    timezone   TEXT        NOT NULL DEFAULT 'America/Sao_Paulo',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT shop_slug_unique UNIQUE (slug)
@@ -162,7 +161,6 @@ type Shop struct {
     Address   string
     City      string
     State     string
-    Timezone  string
     CreatedAt time.Time
     UpdatedAt time.Time
 }
@@ -369,14 +367,13 @@ import (
 func MustCreateShop(t *testing.T, pool *pgxpool.Pool, slug string) *identity.Shop {
     t.Helper()
     shop := &identity.Shop{
-        Name:     "Test Shop " + slug,
-        Slug:     slug,
-        Timezone: "America/Sao_Paulo",
+        Name: "Test Shop " + slug,
+        Slug: slug,
     }
     row := pool.QueryRow(context.Background(),
-        `INSERT INTO shop (name, slug, timezone) VALUES ($1, $2, $3)
+        `INSERT INTO shop (name, slug) VALUES ($1, $2)
          RETURNING id, created_at, updated_at`,
-        shop.Name, shop.Slug, shop.Timezone)
+        shop.Name, shop.Slug)
     if err := row.Scan(&shop.ID, &shop.CreatedAt, &shop.UpdatedAt); err != nil {
         t.Fatalf("MustCreateShop: %v", err)
     }

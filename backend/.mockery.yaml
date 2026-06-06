@@ -1,0 +1,16 @@
+with-expecter: true
+resolve-type-alias: false
+disable-version-string: true
+issue-845-fix: true
+packages:
+  github.com/gcollin65/barbershop/internal/identity:
+    config:
+      dir: "{{.InterfaceDir}}/mocks"
+      outpkg: mocks
+      mockname: "Mock{{.InterfaceName}}"
+      filename: "mock_{{.InterfaceName | lower}}.go"
+    interfaces:
+      ShopRepository:
+      UserRepository:
+      MembershipRepository:
+      Signer:

@@ -18,7 +18,8 @@ func handleHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
-// handleReady returns a closure that checks DB connectivity before reporting readiness.// If pinger is nil the handler always returns 200 (useful in tests / early bootstrap).
+// handleReady returns a closure that checks DB connectivity before reporting readiness.
+// If pinger is nil the handler always returns 200 (useful in tests / early bootstrap).
 func handleReady(pinger DBPinger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if pinger != nil {

@@ -5,82 +5,120 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
 
 	"github.com/gcollin65/barbershop/internal/config"
 	"github.com/gcollin65/barbershop/internal/database"
-	apihttp "github.com/gcollin65/barbershop/internal/http"
-	"github.com/gcollin65/barbershop/internal/logging"
+	apihttp "github.com/gcollin65/barbershop/internal/infra/http"
+	"github.com/gcollin65/barbershop/internal/identity"
+	"github.com/gcollin65/barbershop/internal/infra/repository"
+	"github.com/gcollin65/barbershop/internal/logger"
 )
 
 func main() {
-	cfg, err := config.Load()
-	if err != nil {
-		// No logger yet; fail loudly on bad configuration.
-		panic(err)
-	}
+	fx.New(
+		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
+			return &fxevent.ZapLogger{Logger: log.Named("fx")}
+		}),
+		fx.Provide(
+			config.Load,
+			newLogger,
+			newPool,
+		),
+		fx.Provide(
+			fx.Annotate(repository.NewShopRepository, fx.As(new(identity.ShopRepository))),
+			fx.Annotate(repository.NewUserRepository, fx.As(new(identity.UserRepository))),
+			fx.Annotate(repository.NewMembershipRepository, fx.As(new(identity.MembershipRepository))),
+		),
+		fx.Provide(
+			fx.Annotate(newIdentityService, fx.As(new(identity.Signer))),
+			newRouter,
+		),
+		fx.Invoke(
+			runMigrations,
+			registerRoutes,
+			runServer,
+		),
+	).Run()
+}
 
-	logger, err := logging.New(cfg.LogLevel)
+func newLogger(lc fx.Lifecycle, cfg config.Config) (*zap.Logger, error) {
+	log, err := logger.New(cfg.LogLevel)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	defer func() { _ = logger.Sync() }()
+	lc.Append(fx.Hook{
+		OnStop: func(_ context.Context) error {
+			_ = log.Sync()
+			return nil
+		},
+	})
+	return log, nil
+}
 
+func newPool(lc fx.Lifecycle, cfg config.Config, log *zap.Logger) (*pgxpool.Pool, error) {
+	pool, err := database.New(context.Background(), &cfg, log)
+	if err != nil {
+		return nil, err
+	}
+	lc.Append(fx.Hook{
+		OnStop: func(_ context.Context) error {
+			database.Close(pool)
+			return nil
+		},
+	})
+	return pool, nil
+}
+
+func newIdentityService(
+	shops identity.ShopRepository,
+	users identity.UserRepository,
+	members identity.MembershipRepository,
+) *identity.Service {
+	return identity.NewService(shops, users, members)
+}
+
+func newRouter(cfg config.Config, log *zap.Logger, pool *pgxpool.Pool) *gin.Engine {
 	if cfg.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
+	return apihttp.NewRouter(log, pool)
+}
 
-	// --- Database ---
-	ctx := context.Background()
-	pool, err := database.New(ctx, &cfg, logger)
-	if err != nil {
-		logger.Fatal("failed to connect to database", zap.Error(err))
-	}
-	defer database.Close(pool)
+func runMigrations(cfg config.Config, log *zap.Logger) error {
+	return database.RunMigrations(cfg.DatabaseURL, database.Migrations, log)
+}
 
-	// Apply pending migrations. A failure here is fatal: running against an
-	// inconsistent schema is unsafe.
-	if err := database.RunMigrations(cfg.DatabaseURL, database.Migrations, logger); err != nil {
-		logger.Fatal("migrations failed", zap.Error(err))
-	}
+func registerRoutes(engine *gin.Engine, pool *pgxpool.Pool, svc identity.Signer) {
+	v1 := engine.Group("/v1", apihttp.Transaction(pool))
+	apihttp.RegisterIdentityRoutes(v1, svc)
+}
 
-	// --- HTTP server ---
+func runServer(lc fx.Lifecycle, engine *gin.Engine, cfg config.Config, log *zap.Logger) {
 	srv := &http.Server{
 		Addr:         cfg.Addr(),
-		Handler:      apihttp.NewRouter(logger, pool),
+		Handler:      engine,
 		ReadTimeout:  cfg.ReadTimeout,
 		WriteTimeout: cfg.WriteTimeout,
 	}
-
-	serverErr := make(chan error, 1)
-	go func() {
-		logger.Info("server starting", zap.Int("port", cfg.Port), zap.String("env", cfg.Env))
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			serverErr <- err
-		}
-	}()
-
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
-
-	select {
-	case err := <-serverErr:
-		logger.Fatal("server error", zap.Error(err))
-	case sig := <-stop:
-		logger.Info("shutdown signal received", zap.String("signal", sig.String()))
-	}
-
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
-	defer cancel()
-
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		logger.Error("graceful shutdown failed", zap.Error(err))
-		return
-	}
-	logger.Info("server stopped")
+	lc.Append(fx.Hook{
+		OnStart: func(_ context.Context) error {
+			go func() {
+				log.Info("server starting", zap.Int("port", cfg.Port), zap.String("env", cfg.Env))
+				if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+					log.Error("server error", zap.Error(err))
+				}
+			}()
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			log.Info("server stopping")
+			return srv.Shutdown(ctx)
+		},
+	})
 }

@@ -4,22 +4,21 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/gcollin65/barbershop/internal/identity"
 )
 
 func TestWithTenant_roundTrip(t *testing.T) {
-	var id [16]byte
-	id[15] = 42
+	id := "550e8400-e29b-41d4-a716-446655440000"
 	ctx := identity.WithTenant(context.Background(), id)
 	got, ok := identity.TenantFromCtx(ctx)
-	if !ok || got != id {
-		t.Fatalf("got %v ok=%v, want %v ok=true", got, ok, id)
-	}
+	require.True(t, ok)
+	assert.Equal(t, id, got)
 }
 
 func TestTenantFromCtx_missing(t *testing.T) {
 	_, ok := identity.TenantFromCtx(context.Background())
-	if ok {
-		t.Fatal("expected ok=false for context without tenant")
-	}
+	assert.False(t, ok)
 }

@@ -52,9 +52,10 @@ services to a barber. All screens sit behind the authenticated Owner shell from 
 Implement the slot-availability calculator: given a shop, barber (or "any"), a list of
 services, and a target date, return the open time slots for that day. Slot computation
 must respect shop working hours, the barber's individual working hours, the combined
-service duration, and all existing bookings (no overlaps). Include a comprehensive unit
-test suite covering back-to-back bookings, day-boundary edge cases, timezone handling
-(America/Sao_Paulo), multi-service durations, and the "any available barber" path.
+service duration, and all existing bookings (no overlaps). All times are assumed to be
+in America/Sao_Paulo — the system does not store or convert between timezones. Include
+a comprehensive unit test suite covering back-to-back bookings, day-boundary edge cases,
+multi-service durations, and the "any available barber" path.
 
 ### Item 017: Booking Data Model & State Machine (API)
 Define and migrate the `booking` schema: booking ID, shop (tenant), barber, customer,

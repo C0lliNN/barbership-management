@@ -159,6 +159,10 @@ May or may not create a full account — booking friction must be minimal.
 > - **Migration tool:** `github.com/golang-migrate/migrate/v4` — SQL-file migrations, embedded via `embed.FS`, CLI + programmatic API.
 
 ### 5.2 Architectural Principles
+- **Hexagonal Architecture (Ports & Adapters):** domain packages (`internal/<domain>/`)
+  contain entities, repository interfaces, and service logic with zero infrastructure
+  imports. PostgreSQL adapters live in `internal/infra/repository/`. Full details in
+  [`docs/architecture.md`](../architecture.md).
 - **Multi-tenancy** baked into the data model from day one (tenant/shop ID scoping on
   every domain entity; enforce isolation at the query/repository layer). Decide
   shared-schema-with-tenant-column vs schema-per-tenant during planning — start
@@ -170,7 +174,8 @@ May or may not create a full account — booking friction must be minimal.
 - **Idempotent payment handling:** all payment webhooks processed idempotently;
   money state derived from provider events, not optimistic assumptions.
 - **Localization:** Brazilian Portuguese (pt-BR) as the primary locale; currency in
-  BRL (R$); America/Sao_Paulo and other BR timezones handled correctly.
+  BRL (R$); all dates and times assumed to be in America/Sao_Paulo (no per-shop or
+  multi-timezone support for now).
 
 ### 5.3 Infrastructure & Deployment (initial assumptions)
 - Containerized Go service + managed PostgreSQL.

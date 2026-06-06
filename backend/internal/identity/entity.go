@@ -1,8 +1,5 @@
 package identity
 
-import "time"
-
-// Role mirrors the user_role PostgreSQL enum.
 type Role string
 
 const (
@@ -12,32 +9,31 @@ const (
 )
 
 type Shop struct {
-	ID        [16]byte
+	ID        string
 	Name      string
 	Slug      string
 	Phone     string
 	Address   string
 	City      string
 	State     string
-	Timezone  string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	CreatedAt int64
+	UpdatedAt int64
 }
 
 type User struct {
-	ID           [16]byte
+	ID           string
 	Email        string
 	PasswordHash string
 	FullName     string
 	Phone        string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	CreatedAt    int64
+	UpdatedAt    int64
 }
 
 type Membership struct {
-	ID        [16]byte
-	ShopID    [16]byte
-	UserID    [16]byte
+	ID        string
+	ShopID    string
+	UserID    string
 	Role      Role
-	CreatedAt time.Time
+	CreatedAt int64
 }

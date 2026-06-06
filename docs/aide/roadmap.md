@@ -238,8 +238,8 @@ and have plan-covered bookings honored against quota.
 observability.
 
 **Deliverables**
-- pt-BR localization pass across all screens; BRL formatting; America/Sao_Paulo and
-  BR timezone correctness verified.
+- pt-BR localization pass across all screens; BRL formatting and America/Sao_Paulo
+  date/time display verified.
 - PWA polish: install prompts, offline affordances/caching for core read screens,
   loading/empty/error states.
 - LGPD: consent capture, data access/export, and deletion flows; minimal PII
