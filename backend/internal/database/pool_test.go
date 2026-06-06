@@ -4,7 +4,6 @@ package database_test
 
 import (
 	"context"
-	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -70,8 +69,8 @@ func TestPoolIntegration(t *testing.T) {
 	if dirty {
 		t.Error("expected clean state after Up, got dirty=true")
 	}
-	if ver != 1 {
-		t.Errorf("expected schema version 1 after Up, got %d", ver)
+	if ver != 2 {
+		t.Errorf("expected schema version 2 after Up, got %d", ver)
 	}
 
 	// --- Roll back (Steps -1) ---
@@ -79,10 +78,16 @@ func TestPoolIntegration(t *testing.T) {
 		t.Fatalf("m.Steps(-1) rollback: %v", err)
 	}
 
-	// After rolling back all migrations, Version returns ErrNilVersion.
-	_, _, err = m.Version()
-	if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
+	// After rolling back migration 2, we should be at version 1.
+	ver, dirty, err = m.Version()
+	if err != nil {
 		t.Fatalf("unexpected error after rollback: %v", err)
+	}
+	if dirty {
+		t.Error("expected clean state after rollback")
+	}
+	if ver != 1 {
+		t.Errorf("expected schema version 1 after rollback, got %d", ver)
 	}
 
 	// --- Idempotency: running Up again after rollback should re-apply ---

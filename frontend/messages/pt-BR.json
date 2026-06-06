@@ -1,0 +1,15 @@
+{
+  "landing": {
+    "title": "Barbearia",
+    "subtitle": "Plataforma de gerenciamento para barbearias",
+    "apiStatus": {
+      "online": "API online",
+      "offline": "API offline",
+      "error": "Erro ao verificar API"
+    }
+  },
+  "common": {
+    "loading": "Carregando...",
+    "error": "Ocorreu um erro"
+  }
+}

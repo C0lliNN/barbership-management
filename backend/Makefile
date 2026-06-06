@@ -9,7 +9,7 @@
 # Quick start:
 #   make dev            → build images and start full stack in Docker (postgres + API + frontend)
 #   make dev-local      → start postgres in Docker, run API locally via go run (fastest)
-#   make frontend-local → run the frontend stub locally (Node 20+ required)
+#   make frontend-local → run the Next.js frontend in dev mode locally (Node 20+ required)
 
 # ── Config ────────────────────────────────────────────────────────────────────
 # docker compose project is defined by docker-compose.yml at the repo root.
@@ -80,11 +80,11 @@ frontend-logs:
 dev-local: db-start
 	DATABASE_URL="$(DATABASE_URL)" go run ./cmd/api
 
-# Run the frontend stub locally without Docker (requires Node 20+).
+# Run the Next.js frontend in dev mode locally without Docker (requires Node 20+).
 # Useful alongside 'make dev-local' when iterating on both API and frontend.
-# Path is relative to backend/ — this Makefile lives there.
 frontend-local:
-	NEXT_PUBLIC_API_URL=http://localhost:8080 node ../frontend/server.js
+	cd ../frontend && NEXT_PUBLIC_API_URL=http://localhost:8080 \
+	    API_INTERNAL_URL=http://localhost:8080 npm run dev
 
 ## ── Database only ────────────────────────────────────────────────────────────
 

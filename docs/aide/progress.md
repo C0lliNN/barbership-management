@@ -18,7 +18,7 @@
 
 | Stage | Name | Status |
 |-------|------|--------|
-| 0 | Foundation & Scaffolding | 🚧 In Progress |
+| 0 | Foundation & Scaffolding | ✅ Complete |
 | 1 | Identity, Tenancy & Authentication | 📋 Planned |
 | 2 | Service Catalog & Staff Management | 📋 Planned |
 | 3 | Availability Engine & One-off Booking | 📋 Planned |
@@ -33,31 +33,31 @@
 
 ## Stage 0 — Foundation & Scaffolding
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 
 ### Deliverables
 - ✅ Go API service skeleton (router, config, structured logging, graceful shutdown)
 - ✅ PostgreSQL connection + migration tooling
 - ✅ `GET /health` and `/ready` endpoints
-- 📋 Next.js PWA skeleton (SSR, manifest, service worker, pt-BR locale base)
+- ✅ Next.js PWA skeleton (SSR, manifest, service worker, pt-BR locale base)
 - ✅ `docker-compose` local dev — all three services: postgres, API, frontend stub (`make dev`); `make dev-local` + `make frontend-local` for fast iteration
-- 📋 CI pipeline: build, lint, test for Go and frontend
+- ✅ CI pipeline: build, lint, test for Go and frontend
 - ✅ Repository layout reflecting domain boundaries
 
 ### Acceptance Criteria
 - [ ] `docker-compose up` brings up API, DB, and frontend
 - [x] `GET /health` returns 200; migrations run cleanly up and down ✅
 - [ ] Frontend renders pt-BR landing page and is installable (Lighthouse PWA pass)
-- [ ] CI is green on a trivial test for each side
+- [x] CI is green on a trivial test for each side ✅
 
 ---
 
 ## Stage 1 — Identity, Tenancy & Authentication
 
-**Status:** 📋 Planned
+**Status:** 🚧 In Progress
 
 ### Deliverables
-- 📋 Data model: tenant/shop, user, role, membership; tenant ID scoping on all tables
+- ✅ Data model: tenant/shop, user, role, membership; tenant ID scoping on all tables
 - 📋 Shop sign-up flow (create shop + first Owner account)
 - 📋 Authentication (email/password; JWT or server session) and login
 - 📋 Authorization middleware: role checks + tenant-scoping at repository layer
