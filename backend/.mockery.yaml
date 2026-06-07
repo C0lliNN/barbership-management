@@ -14,3 +14,4 @@ packages:
       UserRepository:
       MembershipRepository:
       Signer:
+      ShopManager:

@@ -10,6 +10,85 @@
   },
   "common": {
     "loading": "Carregando...",
-    "error": "Ocorreu um erro"
+    "error": "Ocorreu um erro",
+    "save": "Salvar",
+    "saving": "Salvando..."
+  },
+  "signup": {
+    "title": "Cadastre sua barbearia",
+    "subtitle": "Crie sua conta de proprietário e comece a gerenciar agendamentos.",
+    "shopSection": "Dados da barbearia",
+    "ownerSection": "Seus dados",
+    "fields": {
+      "shopName": "Nome da barbearia",
+      "shopPhone": "Telefone da barbearia",
+      "shopAddress": "Endereço",
+      "shopCity": "Cidade",
+      "shopState": "Estado (UF)",
+      "fullName": "Nome completo",
+      "email": "E-mail",
+      "ownerPhone": "Telefone",
+      "password": "Senha"
+    },
+    "submit": "Criar conta",
+    "submitting": "Criando conta...",
+    "loginLink": "Já tem uma conta? Entrar",
+    "errors": {
+      "emailTaken": "E-mail já cadastrado",
+      "shopNameTaken": "Nome de barbearia muito parecido com um já existente; tente outro nome",
+      "validation": "Verifique os campos destacados",
+      "generic": "Não foi possível concluir o cadastro. Tente novamente."
+    }
+  },
+  "login": {
+    "title": "Entrar",
+    "subtitle": "Acesse o painel da sua barbearia.",
+    "fields": {
+      "email": "E-mail",
+      "password": "Senha"
+    },
+    "submit": "Entrar",
+    "submitting": "Entrando...",
+    "signupLink": "Ainda não tem uma conta? Cadastre-se",
+    "signupSuccess": "Cadastro realizado com sucesso! Faça login para continuar.",
+    "errors": {
+      "invalidCredentials": "E-mail ou senha inválidos",
+      "generic": "Não foi possível entrar. Tente novamente."
+    }
+  },
+  "panel": {
+    "loading": "Carregando painel...",
+    "welcome": "Bem-vindo(a), {name}",
+    "roles": {
+      "owner": "Proprietário",
+      "barber": "Barbeiro",
+      "customer": "Cliente"
+    },
+    "nav": {
+      "home": "Início",
+      "shopSettings": "Configurações da loja"
+    },
+    "logout": "Sair",
+    "home": {
+      "title": "Painel",
+      "placeholder": "Em breve: agenda, serviços e muito mais por aqui."
+    }
+  },
+  "shopSettings": {
+    "title": "Configurações da loja",
+    "subtitle": "Mantenha os dados de contato e localização da sua barbearia atualizados.",
+    "fields": {
+      "phone": "Telefone",
+      "address": "Endereço",
+      "city": "Cidade",
+      "state": "Estado (UF)"
+    },
+    "save": "Salvar alterações",
+    "saving": "Salvando...",
+    "success": "Dados da loja atualizados com sucesso.",
+    "errors": {
+      "validation": "Verifique os campos destacados",
+      "generic": "Não foi possível salvar as alterações. Tente novamente."
+    }
   }
 }

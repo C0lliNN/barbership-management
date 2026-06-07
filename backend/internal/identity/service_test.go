@@ -181,3 +181,54 @@ func (s *LoginSuite) TestWrongPassword() {
 	_, err := s.svc.Login(context.Background(), identity.LoginRequest{Email: "joao@test.com", Password: "WrongPass1"})
 	s.ErrorIs(err, identity.ErrInvalidCredentials)
 }
+
+type ShopManagerSuite struct {
+	suite.Suite
+	shops *mocks.MockShopRepository
+	svc   *identity.Service
+}
+
+func TestShopManagerSuite(t *testing.T) {
+	suite.Run(t, new(ShopManagerSuite))
+}
+
+func (s *ShopManagerSuite) SetupTest() {
+	s.shops = mocks.NewMockShopRepository(s.T())
+	s.svc = identity.NewService(s.shops, mocks.NewMockUserRepository(s.T()), mocks.NewMockMembershipRepository(s.T()))
+}
+
+func (s *ShopManagerSuite) TestGetShopReturnsRepoResult() {
+	s.shops.EXPECT().GetByID(mock.Anything, "shop-1").
+		Return(identity.Shop{ID: "shop-1", Name: "Barbearia do João", Slug: "barbearia-do-joao"}, nil)
+
+	shop, err := s.svc.GetShop(context.Background(), "shop-1")
+	s.Require().NoError(err)
+	s.Equal("Barbearia do João", shop.Name)
+}
+
+func (s *ShopManagerSuite) TestGetShopPropagatesNotFound() {
+	s.shops.EXPECT().GetByID(mock.Anything, "shop-x").Return(identity.Shop{}, identity.ErrNotFound)
+
+	_, err := s.svc.GetShop(context.Background(), "shop-x")
+	s.ErrorIs(err, identity.ErrNotFound)
+}
+
+func (s *ShopManagerSuite) TestUpdateShopMapsInputAndCallsRepo() {
+	s.shops.EXPECT().Update(mock.Anything, mock.MatchedBy(func(shop identity.Shop) bool {
+		return shop.ID == "shop-1" && shop.Phone == "+5511988887777" &&
+			shop.Address == "Rua Augusta, 123" && shop.City == "São Paulo" && shop.State == "SP"
+	})).Return(identity.Shop{ID: "shop-1", Phone: "+5511988887777", City: "São Paulo", State: "SP"}, nil)
+
+	shop, err := s.svc.UpdateShop(context.Background(), "shop-1", identity.ShopUpdateInput{
+		Phone: "+5511988887777", Address: "Rua Augusta, 123", City: "São Paulo", State: "SP",
+	})
+	s.Require().NoError(err)
+	s.Equal("+5511988887777", shop.Phone)
+}
+
+func (s *ShopManagerSuite) TestUpdateShopPropagatesNotFound() {
+	s.shops.EXPECT().Update(mock.Anything, mock.Anything).Return(identity.Shop{}, identity.ErrNotFound)
+
+	_, err := s.svc.UpdateShop(context.Background(), "shop-x", identity.ShopUpdateInput{City: "São Paulo"})
+	s.ErrorIs(err, identity.ErrNotFound)
+}

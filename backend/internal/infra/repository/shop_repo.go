@@ -71,6 +71,33 @@ func (r *ShopRepository) GetByID(ctx context.Context, id string) (identity.Shop,
 	return shop, nil
 }
 
+func (r *ShopRepository) Update(ctx context.Context, shop identity.Shop) (identity.Shop, error) {
+	q := database.QuerierFromCtx(ctx, r.pool)
+	var phone, address, city, state pgtype.Text
+	var createdAt, updatedAt time.Time
+	err := q.QueryRow(ctx,
+		`UPDATE shop SET phone = $2, address = $3, city = $4, state = $5, updated_at = now()
+		 WHERE id = $1::uuid
+		 RETURNING id::text, name, slug, phone, address, city, state, created_at, updated_at`,
+		shop.ID,
+		nullText(shop.Phone), nullText(shop.Address), nullText(shop.City), nullText(shop.State),
+	).Scan(&shop.ID, &shop.Name, &shop.Slug, &phone, &address, &city, &state,
+		&createdAt, &updatedAt)
+	if err != nil {
+		if isNotFound(err) {
+			return identity.Shop{}, identity.ErrNotFound
+		}
+		return identity.Shop{}, fmt.Errorf("shop update: %w", err)
+	}
+	shop.Phone = phone.String
+	shop.Address = address.String
+	shop.City = city.String
+	shop.State = state.String
+	shop.CreatedAt = createdAt.Unix()
+	shop.UpdatedAt = updatedAt.Unix()
+	return shop, nil
+}
+
 func (r *ShopRepository) GetBySlug(ctx context.Context, slug string) (identity.Shop, error) {
 	q := database.QuerierFromCtx(ctx, r.pool)
 	var shop identity.Shop

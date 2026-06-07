@@ -111,6 +111,21 @@ type shopDTO struct {
 	City      string `json:"city,omitempty"`
 	State     string `json:"state,omitempty"`
 	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+func toShopDTO(shop identity.Shop) shopDTO {
+	return shopDTO{
+		ID:        shop.ID,
+		Name:      shop.Name,
+		Slug:      shop.Slug,
+		Phone:     shop.Phone,
+		Address:   shop.Address,
+		City:      shop.City,
+		State:     shop.State,
+		CreatedAt: time.Unix(shop.CreatedAt, 0).UTC().Format(time.RFC3339),
+		UpdatedAt: time.Unix(shop.UpdatedAt, 0).UTC().Format(time.RFC3339),
+	}
 }
 
 type ownerDTO struct {
@@ -128,16 +143,7 @@ type signUpDTO struct {
 
 func toSignUpDTO(resp identity.SignUpResponse) signUpDTO {
 	return signUpDTO{
-		Shop: shopDTO{
-			ID:        resp.Shop.ID,
-			Name:      resp.Shop.Name,
-			Slug:      resp.Shop.Slug,
-			Phone:     resp.Shop.Phone,
-			Address:   resp.Shop.Address,
-			City:      resp.Shop.City,
-			State:     resp.Shop.State,
-			CreatedAt: time.Unix(resp.Shop.CreatedAt, 0).UTC().Format(time.RFC3339),
-		},
+		Shop: toShopDTO(resp.Shop),
 		Owner: ownerDTO{
 			ID:        resp.Owner.ID,
 			Email:     resp.Owner.Email,

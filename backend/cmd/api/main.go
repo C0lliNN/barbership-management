@@ -36,7 +36,9 @@ func main() {
 			fx.Annotate(repository.NewMembershipRepository, fx.As(new(identity.MembershipRepository))),
 		),
 		fx.Provide(
-			fx.Annotate(newIdentityService, fx.As(new(identity.Signer))),
+			newIdentityService,
+			func(svc *identity.Service) identity.Signer { return svc },
+			func(svc *identity.Service) identity.ShopManager { return svc },
 			newRouter,
 		),
 		fx.Invoke(
@@ -98,9 +100,17 @@ func runMigrations(cfg config.Config, log *zap.Logger) error {
 	return database.RunMigrations(cfg.DatabaseURL, database.Migrations, log)
 }
 
-func registerRoutes(engine *gin.Engine, pool *pgxpool.Pool, svc identity.Signer, cfg config.Config) {
+func registerRoutes(
+	engine *gin.Engine,
+	pool *pgxpool.Pool,
+	signer identity.Signer,
+	shops identity.ShopManager,
+	memberships identity.MembershipRepository,
+	cfg config.Config,
+) {
 	v1 := engine.Group("/v1", apihttp.Transaction(pool))
-	apihttp.RegisterIdentityRoutes(v1, svc, cfg.JWTSecret)
+	apihttp.RegisterIdentityRoutes(v1, signer, cfg.JWTSecret)
+	apihttp.RegisterShopRoutes(v1, shops, memberships, cfg.JWTSecret)
 }
 
 func runServer(lc fx.Lifecycle, engine *gin.Engine, cfg config.Config, log *zap.Logger) {

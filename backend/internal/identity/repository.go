@@ -7,6 +7,8 @@ type ShopRepository interface {
 	Create(ctx context.Context, shop Shop) (Shop, error)
 	GetByID(ctx context.Context, id string) (Shop, error)
 	GetBySlug(ctx context.Context, slug string) (Shop, error)
+	// Update persists phone/address/city/state by ID. name/slug are immutable here.
+	Update(ctx context.Context, shop Shop) (Shop, error)
 }
 
 // UserRepository handles global user account records.

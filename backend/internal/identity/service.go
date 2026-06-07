@@ -15,6 +15,23 @@ type Signer interface {
 	Login(ctx context.Context, req LoginRequest) (LoginResponse, error)
 }
 
+// ShopManager is implemented by Service and can be mocked in handler tests.
+// Membership is verified by middleware before these run, so both methods
+// trust the given shopID and operate as plain tenant-scoped lookups/updates.
+type ShopManager interface {
+	GetShop(ctx context.Context, shopID string) (Shop, error)
+	UpdateShop(ctx context.Context, shopID string, input ShopUpdateInput) (Shop, error)
+}
+
+// ShopUpdateInput carries the contact/location fields an Owner can edit.
+// name/slug are intentionally excluded — see Item 010 design notes.
+type ShopUpdateInput struct {
+	Phone   string `json:"phone"`
+	Address string `json:"address"`
+	City    string `json:"city"`
+	State   string `json:"state" binding:"omitempty,len=2"`
+}
+
 // Service orchestrates identity operations.
 type Service struct {
 	shops       ShopRepository
@@ -196,4 +213,36 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (LoginResponse, e
 	}
 
 	return LoginResponse{Token: token, User: user, ShopID: shopID, Role: role}, nil
+}
+
+// GetShop returns the shop's profile. Membership is verified by middleware
+// before this runs, so it is a thin pass-through to the repository.
+func (s *Service) GetShop(ctx context.Context, shopID string) (Shop, error) {
+	shop, err := s.shops.GetByID(ctx, shopID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return Shop{}, ErrNotFound
+		}
+		return Shop{}, fmt.Errorf("get shop: %w", err)
+	}
+	return shop, nil
+}
+
+// UpdateShop updates the shop's contact/location fields. Membership and role
+// are verified by middleware before this runs.
+func (s *Service) UpdateShop(ctx context.Context, shopID string, input ShopUpdateInput) (Shop, error) {
+	shop, err := s.shops.Update(ctx, Shop{
+		ID:      shopID,
+		Phone:   input.Phone,
+		Address: input.Address,
+		City:    input.City,
+		State:   input.State,
+	})
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return Shop{}, ErrNotFound
+		}
+		return Shop{}, fmt.Errorf("update shop: %w", err)
+	}
+	return shop, nil
 }

@@ -3,6 +3,7 @@ package http
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"time"
 
@@ -20,6 +21,7 @@ const (
 	requestIDKey    = "request_id"
 	tenantHeader    = "X-Tenant"
 	claimsKey       = "claims"
+	membershipKey   = "membership"
 )
 
 // requestID attaches a request ID (from the inbound header or freshly generated)
@@ -91,6 +93,61 @@ func AuthRequired(jwtSecret string) gin.HandlerFunc {
 // Must only be called on routes protected by AuthRequired.
 func claimsFromContext(c *gin.Context) *identity.Claims {
 	return c.MustGet(claimsKey).(*identity.Claims)
+}
+
+// membershipFromContext returns the membership stored by RequireShopMembership.
+// Must only be called on routes protected by RequireShopMembership.
+func membershipFromContext(c *gin.Context) identity.Membership {
+	return c.MustGet(membershipKey).(identity.Membership)
+}
+
+// RequireShopMembership resolves the :shopID URL parameter and the caller's
+// user ID (from AuthRequired claims) to a membership, verified directly
+// against the repository — never against the JWT's embedded shop_id/role,
+// which reflect the user's primary shop at login time and can go stale.
+//
+// On success it stores the membership in the Gin context and the verified
+// shop ID via identity.WithTenant, so handlers and downstream layers use only
+// the ID this middleware confirmed the caller belongs to.
+//
+// Returns 404 — not 403 — both when the shop doesn't exist and when the
+// caller has no membership in it, so shop existence is never leaked.
+func RequireShopMembership(memberships identity.MembershipRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		shopID := c.Param("shopID")
+		claims := claimsFromContext(c)
+
+		m, err := memberships.GetByShopAndUser(c.Request.Context(), shopID, claims.Subject)
+		if err != nil {
+			if errors.Is(err, identity.ErrNotFound) {
+				c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "not found"})
+				return
+			}
+			logger.FromContext(c.Request.Context()).Error("membership lookup failed", zap.Error(err))
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		c.Set(membershipKey, m)
+		c.Request = c.Request.WithContext(identity.WithTenant(c.Request.Context(), shopID))
+		c.Next()
+	}
+}
+
+// RequireRole aborts with 403 unless the caller's membership (stored by
+// RequireShopMembership) has one of the allowed roles. Must run after
+// RequireShopMembership.
+func RequireRole(roles ...identity.Role) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		m := membershipFromContext(c)
+		for _, role := range roles {
+			if m.Role == role {
+				c.Next()
+				return
+			}
+		}
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "insufficient role"})
+	}
 }
 
 // recoverer converts panics into a 500 response and logs them.

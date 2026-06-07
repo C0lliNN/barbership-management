@@ -193,6 +193,63 @@ func (_c *MockShopRepository_GetBySlug_Call) RunAndReturn(run func(context.Conte
 	return _c
 }
 
+// Update provides a mock function with given fields: ctx, shop
+func (_m *MockShopRepository) Update(ctx context.Context, shop identity.Shop) (identity.Shop, error) {
+	ret := _m.Called(ctx, shop)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 identity.Shop
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, identity.Shop) (identity.Shop, error)); ok {
+		return rf(ctx, shop)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, identity.Shop) identity.Shop); ok {
+		r0 = rf(ctx, shop)
+	} else {
+		r0 = ret.Get(0).(identity.Shop)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, identity.Shop) error); ok {
+		r1 = rf(ctx, shop)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockShopRepository_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type MockShopRepository_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - ctx context.Context
+//   - shop identity.Shop
+func (_e *MockShopRepository_Expecter) Update(ctx interface{}, shop interface{}) *MockShopRepository_Update_Call {
+	return &MockShopRepository_Update_Call{Call: _e.mock.On("Update", ctx, shop)}
+}
+
+func (_c *MockShopRepository_Update_Call) Run(run func(ctx context.Context, shop identity.Shop)) *MockShopRepository_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(identity.Shop))
+	})
+	return _c
+}
+
+func (_c *MockShopRepository_Update_Call) Return(_a0 identity.Shop, _a1 error) *MockShopRepository_Update_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockShopRepository_Update_Call) RunAndReturn(run func(context.Context, identity.Shop) (identity.Shop, error)) *MockShopRepository_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockShopRepository creates a new instance of MockShopRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockShopRepository(t interface {

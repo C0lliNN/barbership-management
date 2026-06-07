@@ -19,7 +19,7 @@
 | Stage | Name | Status |
 |-------|------|--------|
 | 0 | Foundation & Scaffolding | ✅ Complete |
-| 1 | Identity, Tenancy & Authentication | 📋 Planned |
+| 1 | Identity, Tenancy & Authentication | ✅ Complete |
 | 2 | Service Catalog & Staff Management | 📋 Planned |
 | 3 | Availability Engine & One-off Booking | 📋 Planned |
 | 4 | Barber Daily Schedule View | 📋 Planned |
@@ -54,20 +54,20 @@
 
 ## Stage 1 — Identity, Tenancy & Authentication
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 
 ### Deliverables
 - ✅ Data model: tenant/shop, user, role, membership; tenant ID scoping on all tables
 - ✅ Shop sign-up flow (create shop + first Owner account)
 - ✅ Authentication (email/password; JWT or server session) and login
-- 📋 Authorization middleware: role checks + tenant-scoping at repository layer
-- 📋 Frontend: sign-up, login, role-aware authenticated shell
+- ✅ Authorization middleware: role checks + tenant-scoping at repository layer
+- ✅ Frontend: sign-up, login, role-aware authenticated shell
 
 ### Acceptance Criteria
-- [ ] New user can create a shop and log in as Owner
-- [ ] Shop A cannot read or mutate Shop B's data (isolation test)
-- [ ] Role-protected endpoints reject unauthorized roles
-- [ ] Auth works end-to-end through the frontend
+- [x] New user can create a shop and log in as Owner
+- [x] Shop A cannot read or mutate Shop B's data (isolation test)
+- [x] Role-protected endpoints reject unauthorized roles
+- [x] Auth works end-to-end through the frontend
 
 ---
 
