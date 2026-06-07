@@ -17,8 +17,12 @@ COMPOSE := docker compose -f ../docker-compose.yml --project-directory ..
 
 # DATABASE_URL for migrate-* targets and dev-local.
 # Read from backend/.env if present; otherwise falls back to the dev default.
-DATABASE_URL ?= $(shell grep -s '^DATABASE_URL=' .env | cut -d= -f2-)
-DATABASE_URL ?= postgres://barber:secret@localhost:5432/barbershop?sslmode=disable
+# (Two chained ?= won't fall through on an empty shell result — both count as
+# "defined" — so check for blank explicitly instead.)
+DATABASE_URL := $(shell grep -s '^DATABASE_URL=' .env | cut -d= -f2-)
+ifeq ($(strip $(DATABASE_URL)),)
+DATABASE_URL := postgres://barber:secret@localhost:5432/barbershop?sslmode=disable
+endif
 
 # golang-migrate requires pgx5:// scheme; convert automatically.
 PGX5_URL := $(subst postgres://,pgx5://,$(subst postgresql://,pgx5://,$(DATABASE_URL)))
@@ -76,9 +80,15 @@ frontend-logs:
 
 # Start only postgres in Docker and run the API directly via 'go run'.
 # Faster iteration: no image rebuild needed on code changes — just re-run.
-# Reads DATABASE_URL from backend/.env if present (copy from .env.example first).
+# Loads every variable from backend/.env if present (copy from .env.example
+# first) — the API needs more than DATABASE_URL (e.g. JWT_SECRET) to start.
 dev-local: db-start
-	DATABASE_URL="$(DATABASE_URL)" go run ./cmd/api
+	@set -a; \
+	[ -f .env ] && . ./.env; \
+	set +a; \
+	DATABASE_URL="$${DATABASE_URL:-$(DATABASE_URL)}" \
+	JWT_SECRET="$${JWT_SECRET:-changeme-change-in-production-min32chars}" \
+	go run ./cmd/api
 
 # Run the Next.js frontend in dev mode locally without Docker (requires Node 20+).
 # Useful alongside 'make dev-local' when iterating on both API and frontend.
