@@ -79,8 +79,12 @@ func newIdentityService(
 	shops identity.ShopRepository,
 	users identity.UserRepository,
 	members identity.MembershipRepository,
+	cfg config.Config,
 ) *identity.Service {
-	return identity.NewService(shops, users, members)
+	return identity.NewService(shops, users, members,
+		identity.WithJWTSecret(cfg.JWTSecret),
+		identity.WithJWTExpiry(cfg.JWTExpiry),
+	)
 }
 
 func newRouter(cfg config.Config, log *zap.Logger, pool *pgxpool.Pool) *gin.Engine {
@@ -94,9 +98,9 @@ func runMigrations(cfg config.Config, log *zap.Logger) error {
 	return database.RunMigrations(cfg.DatabaseURL, database.Migrations, log)
 }
 
-func registerRoutes(engine *gin.Engine, pool *pgxpool.Pool, svc identity.Signer) {
+func registerRoutes(engine *gin.Engine, pool *pgxpool.Pool, svc identity.Signer, cfg config.Config) {
 	v1 := engine.Group("/v1", apihttp.Transaction(pool))
-	apihttp.RegisterIdentityRoutes(v1, svc)
+	apihttp.RegisterIdentityRoutes(v1, svc, cfg.JWTSecret)
 }
 
 func runServer(lc fx.Lifecycle, engine *gin.Engine, cfg config.Config, log *zap.Logger) {

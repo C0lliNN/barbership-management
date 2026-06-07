@@ -2,7 +2,9 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -10,6 +12,7 @@ import (
 // Signer is implemented by Service and can be mocked in handler tests.
 type Signer interface {
 	SignUp(ctx context.Context, req SignUpRequest) (SignUpResponse, error)
+	Login(ctx context.Context, req LoginRequest) (LoginResponse, error)
 }
 
 // Service orchestrates identity operations.
@@ -18,6 +21,8 @@ type Service struct {
 	users       UserRepository
 	memberships MembershipRepository
 	bcryptCost  int
+	jwtSecret   string
+	jwtExpiry   time.Duration
 }
 
 // Option configures a Service.
@@ -27,6 +32,16 @@ type Option func(*Service)
 // Pass bcrypt.MinCost in tests to keep them fast.
 func WithBcryptCost(cost int) Option {
 	return func(s *Service) { s.bcryptCost = cost }
+}
+
+// WithJWTSecret sets the secret used to sign and verify access tokens.
+func WithJWTSecret(secret string) Option {
+	return func(s *Service) { s.jwtSecret = secret }
+}
+
+// WithJWTExpiry overrides the access token lifetime (default 24h).
+func WithJWTExpiry(d time.Duration) Option {
+	return func(s *Service) { s.jwtExpiry = d }
 }
 
 func NewService(
@@ -40,6 +55,7 @@ func NewService(
 		users:       users,
 		memberships: memberships,
 		bcryptCost:  12,
+		jwtExpiry:   24 * time.Hour,
 	}
 	for _, o := range opts {
 		o(svc)
@@ -128,4 +144,56 @@ func (s *Service) signUp(ctx context.Context, req SignUpRequest, passwordHash st
 	}
 
 	return SignUpResponse{Shop: shop, Owner: user}, nil
+}
+
+// LoginRequest carries email/password credentials for authentication.
+type LoginRequest struct {
+	Email    string `json:"email"    binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+}
+
+// LoginResponse is returned on successful authentication.
+type LoginResponse struct {
+	Token  string `json:"token"`
+	User   User   `json:"user"`
+	ShopID string `json:"shop_id"`
+	Role   Role   `json:"role"`
+}
+
+// Login verifies the given credentials and, on success, returns a signed JWT
+// along with the user's profile and primary shop membership (the first
+// membership by created_at; empty if the user has no memberships).
+//
+// Returns ErrInvalidCredentials for both unknown emails and wrong passwords —
+// the identical response prevents account enumeration.
+func (s *Service) Login(ctx context.Context, req LoginRequest) (LoginResponse, error) {
+	user, err := s.users.GetByEmail(ctx, req.Email)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return LoginResponse{}, ErrInvalidCredentials
+		}
+		return LoginResponse{}, fmt.Errorf("login lookup: %w", err)
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		return LoginResponse{}, ErrInvalidCredentials
+	}
+
+	var shopID string
+	var role Role
+	memberships, err := s.memberships.ListByUser(ctx, user.ID)
+	if err != nil {
+		return LoginResponse{}, fmt.Errorf("login memberships: %w", err)
+	}
+	if len(memberships) > 0 {
+		shopID = memberships[0].ShopID
+		role = memberships[0].Role
+	}
+
+	token, err := SignToken(s.jwtSecret, s.jwtExpiry, user, shopID, role)
+	if err != nil {
+		return LoginResponse{}, fmt.Errorf("login sign: %w", err)
+	}
+
+	return LoginResponse{Token: token, User: user, ShopID: shopID, Role: role}, nil
 }

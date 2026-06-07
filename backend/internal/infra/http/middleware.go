@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/gcollin65/barbershop/internal/database"
+	"github.com/gcollin65/barbershop/internal/identity"
 	"github.com/gcollin65/barbershop/internal/logger"
 )
 
@@ -18,6 +19,7 @@ const (
 	requestIDHeader = "X-Request-ID"
 	requestIDKey    = "request_id"
 	tenantHeader    = "X-Tenant"
+	claimsKey       = "claims"
 )
 
 // requestID attaches a request ID (from the inbound header or freshly generated)
@@ -62,6 +64,33 @@ func requestLogger() gin.HandlerFunc {
 			zap.Duration("duration", time.Since(start)),
 		)
 	}
+}
+
+// AuthRequired validates the JWT in the Authorization header and stores the
+// parsed claims in the Gin context under the key "claims" (see claimsFromContext).
+func AuthRequired(jwtSecret string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		header := c.GetHeader("Authorization")
+		const prefix = "Bearer "
+		if len(header) <= len(prefix) || header[:len(prefix)] != prefix {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing or malformed token"})
+			return
+		}
+		tokenStr := header[len(prefix):]
+		claims, err := identity.ParseToken(jwtSecret, tokenStr)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
+			return
+		}
+		c.Set(claimsKey, claims)
+		c.Next()
+	}
+}
+
+// claimsFromContext returns the JWT claims stored by AuthRequired.
+// Must only be called on routes protected by AuthRequired.
+func claimsFromContext(c *gin.Context) *identity.Claims {
+	return c.MustGet(claimsKey).(*identity.Claims)
 }
 
 // recoverer converts panics into a 500 response and logs them.

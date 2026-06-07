@@ -22,6 +22,63 @@ func (_m *MockSigner) EXPECT() *MockSigner_Expecter {
 	return &MockSigner_Expecter{mock: &_m.Mock}
 }
 
+// Login provides a mock function with given fields: ctx, req
+func (_m *MockSigner) Login(ctx context.Context, req identity.LoginRequest) (identity.LoginResponse, error) {
+	ret := _m.Called(ctx, req)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Login")
+	}
+
+	var r0 identity.LoginResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, identity.LoginRequest) (identity.LoginResponse, error)); ok {
+		return rf(ctx, req)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, identity.LoginRequest) identity.LoginResponse); ok {
+		r0 = rf(ctx, req)
+	} else {
+		r0 = ret.Get(0).(identity.LoginResponse)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, identity.LoginRequest) error); ok {
+		r1 = rf(ctx, req)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSigner_Login_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Login'
+type MockSigner_Login_Call struct {
+	*mock.Call
+}
+
+// Login is a helper method to define mock.On call
+//   - ctx context.Context
+//   - req identity.LoginRequest
+func (_e *MockSigner_Expecter) Login(ctx interface{}, req interface{}) *MockSigner_Login_Call {
+	return &MockSigner_Login_Call{Call: _e.mock.On("Login", ctx, req)}
+}
+
+func (_c *MockSigner_Login_Call) Run(run func(ctx context.Context, req identity.LoginRequest)) *MockSigner_Login_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(identity.LoginRequest))
+	})
+	return _c
+}
+
+func (_c *MockSigner_Login_Call) Return(_a0 identity.LoginResponse, _a1 error) *MockSigner_Login_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSigner_Login_Call) RunAndReturn(run func(context.Context, identity.LoginRequest) (identity.LoginResponse, error)) *MockSigner_Login_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SignUp provides a mock function with given fields: ctx, req
 func (_m *MockSigner) SignUp(ctx context.Context, req identity.SignUpRequest) (identity.SignUpResponse, error) {
 	ret := _m.Called(ctx, req)

@@ -12,6 +12,8 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("DATABASE_URL", "")
 	t.Setenv("DB_MAX_CONNS", "")
 	t.Setenv("DB_CONN_TIMEOUT", "")
+	t.Setenv("JWT_SECRET", "")
+	t.Setenv("JWT_EXPIRY", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -32,6 +34,9 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.DBConnTimeout != 5*time.Second {
 		t.Errorf("expected default DBConnTimeout 5s, got %v", cfg.DBConnTimeout)
 	}
+	if cfg.JWTExpiry != 24*time.Hour {
+		t.Errorf("expected default JWTExpiry 24h, got %v", cfg.JWTExpiry)
+	}
 }
 
 func TestLoadOverrides(t *testing.T) {
@@ -41,6 +46,8 @@ func TestLoadOverrides(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://user:pass@db:5432/barbershop?sslmode=disable")
 	t.Setenv("DB_MAX_CONNS", "20")
 	t.Setenv("DB_CONN_TIMEOUT", "10s")
+	t.Setenv("JWT_SECRET", "this-is-a-test-secret-with-32-chars-min")
+	t.Setenv("JWT_EXPIRY", "1h")
 
 	cfg, err := Load()
 	if err != nil {
@@ -64,17 +71,25 @@ func TestLoadOverrides(t *testing.T) {
 	if cfg.DBConnTimeout != 10*time.Second {
 		t.Errorf("expected DBConnTimeout 10s, got %v", cfg.DBConnTimeout)
 	}
+	if cfg.JWTSecret != "this-is-a-test-secret-with-32-chars-min" {
+		t.Errorf("unexpected JWTSecret: %q", cfg.JWTSecret)
+	}
+	if cfg.JWTExpiry != time.Hour {
+		t.Errorf("expected JWTExpiry 1h, got %v", cfg.JWTExpiry)
+	}
 }
 
 func TestLoadInvalid(t *testing.T) {
 	tests := []struct {
-		name         string
-		port         string
-		logLevel     string
-		appEnv       string
-		databaseURL  string
-		dbMaxConns   string
+		name          string
+		port          string
+		logLevel      string
+		appEnv        string
+		databaseURL   string
+		dbMaxConns    string
 		dbConnTimeout string
+		jwtSecret     string
+		jwtExpiry     string
 	}{
 		{
 			name:     "non-numeric port",
@@ -122,6 +137,29 @@ func TestLoadInvalid(t *testing.T) {
 			appEnv:        "test",
 			dbConnTimeout: "notaduration",
 		},
+		{
+			name:        "missing JWT_SECRET in non-test env",
+			port:        "8080",
+			logLevel:    "info",
+			appEnv:      "development",
+			databaseURL: "postgres://user:pass@db:5432/barbershop?sslmode=disable",
+			jwtSecret:   "",
+		},
+		{
+			name:        "JWT_SECRET too short in non-test env",
+			port:        "8080",
+			logLevel:    "info",
+			appEnv:      "development",
+			databaseURL: "postgres://user:pass@db:5432/barbershop?sslmode=disable",
+			jwtSecret:   "too-short",
+		},
+		{
+			name:      "invalid JWT_EXPIRY",
+			port:      "8080",
+			logLevel:  "info",
+			appEnv:    "test",
+			jwtExpiry: "notaduration",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -131,6 +169,8 @@ func TestLoadInvalid(t *testing.T) {
 			t.Setenv("DATABASE_URL", tt.databaseURL)
 			t.Setenv("DB_MAX_CONNS", tt.dbMaxConns)
 			t.Setenv("DB_CONN_TIMEOUT", tt.dbConnTimeout)
+			t.Setenv("JWT_SECRET", tt.jwtSecret)
+			t.Setenv("JWT_EXPIRY", tt.jwtExpiry)
 			if _, err := Load(); err == nil {
 				t.Error("expected error, got nil")
 			}

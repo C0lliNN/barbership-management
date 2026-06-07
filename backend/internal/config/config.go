@@ -22,6 +22,10 @@ type Config struct {
 	DatabaseURL   string
 	DBMaxConns    int32
 	DBConnTimeout time.Duration
+
+	// Auth
+	JWTSecret string
+	JWTExpiry time.Duration
 }
 
 var validLogLevels = map[string]struct{}{
@@ -45,6 +49,7 @@ func Load() (Config, error) {
 		WriteTimeout:    15 * time.Second,
 		DBMaxConns:      10,
 		DBConnTimeout:   5 * time.Second,
+		JWTExpiry:       24 * time.Hour,
 	}
 
 	if v := os.Getenv("PORT"); v != "" {
@@ -89,6 +94,23 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("invalid DB_CONN_TIMEOUT %q: %w", v, err)
 		}
 		cfg.DBConnTimeout = d
+	}
+
+	// Auth configuration
+	cfg.JWTSecret = os.Getenv("JWT_SECRET")
+	if cfg.JWTSecret == "" && cfg.Env != "test" {
+		return Config{}, fmt.Errorf("JWT_SECRET is required (set APP_ENV=test to bypass)")
+	}
+	if len(cfg.JWTSecret) < 32 && cfg.Env != "test" {
+		return Config{}, fmt.Errorf("JWT_SECRET must be at least 32 characters")
+	}
+
+	if v := os.Getenv("JWT_EXPIRY"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid JWT_EXPIRY %q: %w", v, err)
+		}
+		cfg.JWTExpiry = d
 	}
 
 	return cfg, nil

@@ -3,6 +3,7 @@ package identity_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -105,4 +106,78 @@ func (s *SignUpSuite) TestDuplicateEmail() {
 
 	_, err := s.svc.SignUp(context.Background(), req)
 	s.ErrorIs(err, identity.ErrEmailTaken)
+}
+
+type LoginSuite struct {
+	suite.Suite
+	shops   *mocks.MockShopRepository
+	users   *mocks.MockUserRepository
+	members *mocks.MockMembershipRepository
+	svc     *identity.Service
+}
+
+func TestLoginSuite(t *testing.T) {
+	suite.Run(t, new(LoginSuite))
+}
+
+func (s *LoginSuite) SetupTest() {
+	s.shops = mocks.NewMockShopRepository(s.T())
+	s.users = mocks.NewMockUserRepository(s.T())
+	s.members = mocks.NewMockMembershipRepository(s.T())
+	s.svc = identity.NewService(s.shops, s.users, s.members,
+		identity.WithBcryptCost(bcrypt.MinCost),
+		identity.WithJWTSecret("test-secret"),
+		identity.WithJWTExpiry(time.Hour),
+	)
+}
+
+func hashPassword(s *suite.Suite, password string) string {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
+	s.Require().NoError(err)
+	return string(hash)
+}
+
+func (s *LoginSuite) TestHappyPathWithMembership() {
+	hash := hashPassword(&s.Suite, "Secret123")
+	s.users.EXPECT().GetByEmail(mock.Anything, "joao@test.com").
+		Return(identity.User{ID: "user-1", Email: "joao@test.com", PasswordHash: hash}, nil)
+	s.members.EXPECT().ListByUser(mock.Anything, "user-1").
+		Return([]identity.Membership{{ID: "mem-1", ShopID: "shop-1", UserID: "user-1", Role: identity.RoleOwner}}, nil)
+
+	resp, err := s.svc.Login(context.Background(), identity.LoginRequest{Email: "joao@test.com", Password: "Secret123"})
+	s.Require().NoError(err)
+	s.NotEmpty(resp.Token)
+	s.Equal("shop-1", resp.ShopID)
+	s.Equal(identity.RoleOwner, resp.Role)
+	s.Equal("joao@test.com", resp.User.Email)
+}
+
+func (s *LoginSuite) TestHappyPathNoMembership() {
+	hash := hashPassword(&s.Suite, "Secret123")
+	s.users.EXPECT().GetByEmail(mock.Anything, "joao@test.com").
+		Return(identity.User{ID: "user-1", Email: "joao@test.com", PasswordHash: hash}, nil)
+	s.members.EXPECT().ListByUser(mock.Anything, "user-1").Return(nil, nil)
+
+	resp, err := s.svc.Login(context.Background(), identity.LoginRequest{Email: "joao@test.com", Password: "Secret123"})
+	s.Require().NoError(err)
+	s.NotEmpty(resp.Token)
+	s.Empty(resp.ShopID)
+	s.Empty(resp.Role)
+}
+
+func (s *LoginSuite) TestUnknownEmail() {
+	s.users.EXPECT().GetByEmail(mock.Anything, "ghost@test.com").
+		Return(identity.User{}, identity.ErrNotFound)
+
+	_, err := s.svc.Login(context.Background(), identity.LoginRequest{Email: "ghost@test.com", Password: "whatever1"})
+	s.ErrorIs(err, identity.ErrInvalidCredentials)
+}
+
+func (s *LoginSuite) TestWrongPassword() {
+	hash := hashPassword(&s.Suite, "Secret123")
+	s.users.EXPECT().GetByEmail(mock.Anything, "joao@test.com").
+		Return(identity.User{ID: "user-1", Email: "joao@test.com", PasswordHash: hash}, nil)
+
+	_, err := s.svc.Login(context.Background(), identity.LoginRequest{Email: "joao@test.com", Password: "WrongPass1"})
+	s.ErrorIs(err, identity.ErrInvalidCredentials)
 }

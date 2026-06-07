@@ -59,7 +59,7 @@
 ### Deliverables
 - ✅ Data model: tenant/shop, user, role, membership; tenant ID scoping on all tables
 - ✅ Shop sign-up flow (create shop + first Owner account)
-- 📋 Authentication (email/password; JWT or server session) and login
+- ✅ Authentication (email/password; JWT or server session) and login
 - 📋 Authorization middleware: role checks + tenant-scoping at repository layer
 - 📋 Frontend: sign-up, login, role-aware authenticated shell
 

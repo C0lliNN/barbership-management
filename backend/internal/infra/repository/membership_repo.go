@@ -83,6 +83,35 @@ func (r *MembershipRepository) ListByShop(ctx context.Context, shopID string) ([
 	return memberships, nil
 }
 
+func (r *MembershipRepository) ListByUser(ctx context.Context, userID string) ([]identity.Membership, error) {
+	q := database.QuerierFromCtx(ctx, r.pool)
+	rows, err := q.Query(ctx,
+		`SELECT id::text, shop_id::text, user_id::text, role, created_at
+		 FROM membership WHERE user_id = $1::uuid ORDER BY created_at ASC`, userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("membership list by user: %w", err)
+	}
+	defer rows.Close()
+
+	var memberships []identity.Membership
+	for rows.Next() {
+		var m identity.Membership
+		var role string
+		var createdAt time.Time
+		if err := rows.Scan(&m.ID, &m.ShopID, &m.UserID, &role, &createdAt); err != nil {
+			return nil, fmt.Errorf("membership list by user scan: %w", err)
+		}
+		m.Role = identity.Role(role)
+		m.CreatedAt = createdAt.Unix()
+		memberships = append(memberships, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("membership list by user rows: %w", err)
+	}
+	return memberships, nil
+}
+
 func (r *MembershipRepository) Delete(ctx context.Context, shopID, userID string) error {
 	q := database.QuerierFromCtx(ctx, r.pool)
 	_, err := q.Exec(ctx,

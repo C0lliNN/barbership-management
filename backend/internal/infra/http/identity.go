@@ -15,8 +15,13 @@ import (
 )
 
 // RegisterIdentityRoutes wires identity endpoints onto the provided router group.
-func RegisterIdentityRoutes(rg *gin.RouterGroup, svc identity.Signer) {
+func RegisterIdentityRoutes(rg *gin.RouterGroup, svc identity.Signer, jwtSecret string) {
 	rg.POST("/signup", handleSignUp(svc))
+	rg.POST("/login", handleLogin(svc))
+	rg.POST("/logout", handleLogout())
+
+	protected := rg.Group("", AuthRequired(jwtSecret))
+	protected.GET("/me", handleMe())
 }
 
 func handleSignUp(svc identity.Signer) gin.HandlerFunc {
@@ -41,6 +46,45 @@ func handleSignUp(svc identity.Signer) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusCreated, toSignUpDTO(resp))
+	}
+}
+
+func handleLogin(svc identity.Signer) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req identity.LoginRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusUnprocessableEntity, formatValidationError(err))
+			return
+		}
+		resp, err := svc.Login(c.Request.Context(), req)
+		if err != nil {
+			if errors.Is(err, identity.ErrInvalidCredentials) {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid email or password"})
+				return
+			}
+			logger.FromContext(c.Request.Context()).Error("login failed", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+		c.JSON(http.StatusOK, toLoginDTO(resp))
+	}
+}
+
+func handleLogout() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{})
+	}
+}
+
+func handleMe() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		claims := claimsFromContext(c)
+		c.JSON(http.StatusOK, gin.H{
+			"user_id": claims.Subject,
+			"email":   claims.Email,
+			"shop_id": claims.ShopID,
+			"role":    claims.Role,
+		})
 	}
 }
 
@@ -101,5 +145,27 @@ func toSignUpDTO(resp identity.SignUpResponse) signUpDTO {
 			Phone:     resp.Owner.Phone,
 			CreatedAt: time.Unix(resp.Owner.CreatedAt, 0).UTC().Format(time.RFC3339),
 		},
+	}
+}
+
+type loginDTO struct {
+	Token  string   `json:"token"`
+	User   ownerDTO `json:"user"`
+	ShopID string   `json:"shop_id"`
+	Role   string   `json:"role"`
+}
+
+func toLoginDTO(resp identity.LoginResponse) loginDTO {
+	return loginDTO{
+		Token: resp.Token,
+		User: ownerDTO{
+			ID:        resp.User.ID,
+			Email:     resp.User.Email,
+			FullName:  resp.User.FullName,
+			Phone:     resp.User.Phone,
+			CreatedAt: time.Unix(resp.User.CreatedAt, 0).UTC().Format(time.RFC3339),
+		},
+		ShopID: resp.ShopID,
+		Role:   string(resp.Role),
 	}
 }
