@@ -93,7 +93,7 @@ func newRouter(cfg config.Config, log *zap.Logger, pool *pgxpool.Pool) *gin.Engi
 	if cfg.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	return apihttp.NewRouter(log, pool)
+	return apihttp.NewRouter(log, pool, cfg.CORSAllowedOrigins)
 }
 
 func runMigrations(cfg config.Config, log *zap.Logger) error {

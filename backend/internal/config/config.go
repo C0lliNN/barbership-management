@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -26,6 +27,11 @@ type Config struct {
 	// Auth
 	JWTSecret string
 	JWTExpiry time.Duration
+
+	// CORS: origins the API allows browsers to call it from. The frontend runs
+	// on a different origin (e.g. localhost:3000 vs the API's localhost:8080),
+	// so without this the browser blocks the response before JS ever sees it.
+	CORSAllowedOrigins []string
 }
 
 var validLogLevels = map[string]struct{}{
@@ -50,6 +56,9 @@ func Load() (Config, error) {
 		DBMaxConns:      10,
 		DBConnTimeout:   5 * time.Second,
 		JWTExpiry:       24 * time.Hour,
+		CORSAllowedOrigins: []string{
+			"http://localhost:3000",
+		},
 	}
 
 	if v := os.Getenv("PORT"); v != "" {
@@ -111,6 +120,14 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("invalid JWT_EXPIRY %q: %w", v, err)
 		}
 		cfg.JWTExpiry = d
+	}
+
+	if v := os.Getenv("CORS_ALLOWED_ORIGINS"); v != "" {
+		origins := strings.Split(v, ",")
+		for i, origin := range origins {
+			origins[i] = strings.TrimSpace(origin)
+		}
+		cfg.CORSAllowedOrigins = origins
 	}
 
 	return cfg, nil

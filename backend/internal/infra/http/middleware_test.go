@@ -100,6 +100,60 @@ func TestAuthRequiredAbortsWrongSecret(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "invalid or expired token")
 }
 
+// --- cors ---
+
+func newCORSRouter(allowedOrigins []string) *gin.Engine {
+	r := gin.New()
+	r.Use(cors(allowedOrigins))
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
+	return r
+}
+
+func corsRequest(router *gin.Engine, method, origin string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, "/ping", nil)
+	if origin != "" {
+		req.Header.Set("Origin", origin)
+	}
+	if method == http.MethodOptions {
+		req.Header.Set("Access-Control-Request-Method", http.MethodGet)
+	}
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	return w
+}
+
+func TestCORSAllowsConfiguredOrigin(t *testing.T) {
+	router := newCORSRouter([]string{"http://localhost:3000"})
+
+	w := corsRequest(router, http.MethodGet, "http://localhost:3000")
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "http://localhost:3000", w.Header().Get("Access-Control-Allow-Origin"))
+	assert.Equal(t, "Origin", w.Header().Get("Vary"))
+}
+
+func TestCORSOmitsHeaderForUnknownOrigin(t *testing.T) {
+	router := newCORSRouter([]string{"http://localhost:3000"})
+
+	w := corsRequest(router, http.MethodGet, "http://evil.example")
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Empty(t, w.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func TestCORSHandlesPreflight(t *testing.T) {
+	router := newCORSRouter([]string{"http://localhost:3000"})
+
+	w := corsRequest(router, http.MethodOptions, "http://localhost:3000")
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	assert.Equal(t, "http://localhost:3000", w.Header().Get("Access-Control-Allow-Origin"))
+	assert.Contains(t, w.Header().Get("Access-Control-Allow-Methods"), "GET")
+	assert.Contains(t, w.Header().Get("Access-Control-Allow-Headers"), "Authorization")
+}
+
 // --- RequireShopMembership / RequireRole ---
 
 type ShopMembershipMiddlewareSuite struct {

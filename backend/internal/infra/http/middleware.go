@@ -68,6 +68,38 @@ func requestLogger() gin.HandlerFunc {
 	}
 }
 
+// cors allows cross-origin requests from the configured frontend origin(s).
+// The browser fetches the API directly from a different origin (e.g. the
+// Next.js dev server on :3000 calling the API on :8080), so without
+// Access-Control-Allow-* headers it blocks every response before JS sees it.
+//
+// The API is consumed only via Bearer tokens in the Authorization header
+// (never cookies), so credentials are never allowed and origins are matched
+// by exact string comparison — no wildcards.
+func cors(allowedOrigins []string) gin.HandlerFunc {
+	allowed := make(map[string]struct{}, len(allowedOrigins))
+	for _, origin := range allowedOrigins {
+		allowed[origin] = struct{}{}
+	}
+
+	return func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
+		if _, ok := allowed[origin]; ok {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Vary", "Origin")
+			c.Header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+			c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+		}
+
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
+		c.Next()
+	}
+}
+
 // AuthRequired validates the JWT in the Authorization header and stores the
 // parsed claims in the Gin context under the key "claims" (see claimsFromContext).
 func AuthRequired(jwtSecret string) gin.HandlerFunc {

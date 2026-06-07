@@ -30,7 +30,7 @@ type successPinger struct{}
 func (s successPinger) Ping(_ context.Context) error { return nil }
 
 func TestHealthEndpoint(t *testing.T) {
-	router := NewRouter(zap.NewNop(), nil)
+	router := NewRouter(zap.NewNop(), nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rec := httptest.NewRecorder()
@@ -54,7 +54,7 @@ func TestHealthEndpoint(t *testing.T) {
 
 func TestReadyEndpoint_NoPinger(t *testing.T) {
 	// nil pinger → always ready (no DB check).
-	router := NewRouter(zap.NewNop(), nil)
+	router := NewRouter(zap.NewNop(), nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/ready", nil)
 	rec := httptest.NewRecorder()
@@ -74,7 +74,7 @@ func TestReadyEndpoint_NoPinger(t *testing.T) {
 }
 
 func TestReadyEndpoint_PingSuccess(t *testing.T) {
-	router := NewRouter(zap.NewNop(), successPinger{})
+	router := NewRouter(zap.NewNop(), successPinger{}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/ready", nil)
 	rec := httptest.NewRecorder()
@@ -93,7 +93,7 @@ func TestReadyEndpoint_PingSuccess(t *testing.T) {
 }
 
 func TestReadyEndpoint_PingFailure(t *testing.T) {
-	router := NewRouter(zap.NewNop(), failingPinger{err: errors.New("connection refused")})
+	router := NewRouter(zap.NewNop(), failingPinger{err: errors.New("connection refused")}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/ready", nil)
 	rec := httptest.NewRecorder()
@@ -116,7 +116,7 @@ func TestReadyEndpoint_PingFailure(t *testing.T) {
 }
 
 func TestRequestIDHeaderSet(t *testing.T) {
-	router := NewRouter(zap.NewNop(), nil)
+	router := NewRouter(zap.NewNop(), nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rec := httptest.NewRecorder()
